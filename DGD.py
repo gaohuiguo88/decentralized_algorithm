@@ -1,13 +1,14 @@
 import torch
 import math
 import copy
+torch.manual_seed(0)
 # problem:
 L = 10
 # noise = math.sqrt(0.01)*torch.randn((L,3))
 noise = math.sqrt(0)*torch.randn((L,3))
 U = torch.randn((L,3,3))
-x = 0.9*torch.ones((L,3))
-
+x = torch.ones((L,3))
+# print(U)
 v = torch.empty((L,3))
 for i in range(L):
     v[i] = torch.matmul(U[i],x[i])+noise[i]
@@ -30,6 +31,10 @@ for k in range(Iteration):
         with torch.no_grad():
             # print(recon_x.grad[i])
             recon_x[i] = torch.matmul(W[i],cp_recon_x) - alpha * recon_x.grad[i]
+    # if k == 0:
+    #     for i in range(L):
+    #         # print(recon_x.grad[i])
+    #         print(recon_x[i])
 
 for i in range(L):
     print(recon_x[i])
