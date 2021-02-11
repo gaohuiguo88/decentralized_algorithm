@@ -5,7 +5,7 @@ L = 10
 torch.manual_seed(0)
 noise = math.sqrt(0)*torch.randn((L,3))
 U = torch.randn((L,3,3))
-x = torch.ones((L,3))
+x = torch.rand((L,3))
 v = torch.empty((L,3))
 # print(U)
 for i in range(L):
@@ -65,6 +65,6 @@ for k in range(Iteration):
         # print("loos_x: ",loss.data)
 
 for i in range(L):
-    print(recon_x[i])
+    print(recon_x[i]-x[i])
 
 

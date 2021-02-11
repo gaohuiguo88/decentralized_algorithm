@@ -14,10 +14,10 @@ for i in range(L):
 
 Iteration = 100
 W = 1/L * torch.ones((L,L))
-recon_x = torch.zeros((L,3),requires_grad=True)
+recon_x = torch.zeros((L,3))
 alpha = torch.zeros((L,3))
 Neighbour = torch.zeros((L))
-c = 1
+c = 0.1
 for i in range(L):
     neighbour = 0
     for j in range(L):
@@ -25,23 +25,20 @@ for i in range(L):
     Neighbour[i] = neighbour
 
 for k in range(Iteration):
+    c = 0.1/(k+1)
     for i in range(L):
         formula = v[i]-torch.matmul(U[i],recon_x[i])
         f = torch.matmul(torch.transpose(formula.unsqueeze(1), 0, 1), formula.unsqueeze(1))
-        f.backward()
-        # print(recon_x)
+        # print(recon_x)x
         loss = torch.norm(recon_x - x)
-        # print(loss.data)
+    print("Loss: ",loss.data)
     cp_recon_x = copy.deepcopy(recon_x)
     for i in range(L):
-        with torch.no_grad():
-            index = c * Neighbour[i] * recon_x[i] + c*torch.matmul(W[i],cp_recon_x) - alpha[i]
-            recon_x[i] = torch.matmul(torch.inverse(torch.diag(recon_x.grad[i]) + 2*c*Neighbour[i]*torch.eye(3)),index)
+        index = c * Neighbour[i] * cp_recon_x[i] + c*torch.matmul(W[i],cp_recon_x) - alpha[i] + 2*torch.matmul(torch.transpose(U[i],0,1),v[i])
+        # print(index)
+        recon_x[i] = torch.matmul(torch.inverse(2*torch.matmul(torch.transpose(U[i], 0, 1), U[i]) + 2*c*Neighbour[i]*torch.eye(3)),index)
     for i in range(L):
-        with torch.no_grad():
-            alpha[i] = alpha[i] + c * Neighbour[i] * recon_x[i] - c*torch.matmul(W[i],recon_x)
+        alpha[i] = alpha[i] + c * Neighbour[i] * recon_x[i] - c*torch.matmul(W[i],recon_x)
 
-for i in range(L):
-    print(recon_x[i])
 
 

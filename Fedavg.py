@@ -1,5 +1,6 @@
 import torch
 import math
+import numpy
 import copy
 torch.manual_seed(0)
 # problem:
@@ -31,12 +32,11 @@ for k in range(Iteration):
         with torch.no_grad():
             # print(recon_x.grad[i])
             recon_x[i] = torch.matmul(W[i],cp_recon_x) - alpha * recon_x.grad[i]
-    # if k == 0:
-    #     for i in range(L):
-    #         # print(recon_x.grad[i])
-    #         print(recon_x[i])
-
+    for i in range(L):
+        with torch.no_grad():
+            # print(recon_x.shape)
+            # print(sum(recon_x).shape)
+            recon_x[i] = sum(recon_x)/L
 for i in range(L):
     print(recon_x[i])
-
 
