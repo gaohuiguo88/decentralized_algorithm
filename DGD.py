@@ -61,7 +61,7 @@ v = torch.empty((L,node_feature))
 for i in range(L):
     v[i] = torch.matmul(U[i],x[i])+noise[i]
 
-Iteration = 2500
+Iteration = 10000
 # W = 1/L * torch.ones((L,L))
 W = generate_Metropolis_W(data)
 print(W)
