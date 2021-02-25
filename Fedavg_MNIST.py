@@ -73,14 +73,14 @@ for epoch in range(10):
             loss_list.append(loss.data)
             loss.backward()
             optimizer_agent[i].step()
-        print("the loss of agent ",i," : ",sum(loss_list)/(len(loss_list)))
+        # print("the loss of agent ",i," : ",sum(loss_list)/(len(loss_list)))
 
 # test the GNN
-# accuracy_list = []
-# for test_data in test_dataloader:
-#     out = net(test_data[0])
-#     accuracy = sum(torch.max(out,dim=1).indices == test_data[1])
-#     accuracy_list.append(accuracy/128)
-#
-# print(sum(accuracy_list)/len(accuracy_list))
+accuracy_list = []
+for i in range(L):
+    for test_data in test_dataloader:
+        out = net_agent[i](test_data[0])
+        accuracy = sum(torch.max(out,dim=1).indices == test_data[1])
+        accuracy_list.append(accuracy/128)
 
+    print("the average accuracy of agent ",i," : ",sum(accuracy_list)/len(accuracy_list))
