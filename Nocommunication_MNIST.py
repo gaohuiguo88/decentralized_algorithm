@@ -6,11 +6,9 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 import random
-
 torch.manual_seed(0)
 L = 12
 node_feature = 3
-
 
 class Net(nn.Module):
     def __init__(self):
@@ -23,8 +21,6 @@ class Net(nn.Module):
         x = self.softmax(self.fc(x))
         return x
 
-
-target_model = Net()
 net_agent = []
 optimizer_agent = []
 for i in range(L):
@@ -35,27 +31,28 @@ transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize(mean=[0.5], std=[0.5])])
 
 train_set = list(mnist.MNIST('data/mnist', train=True, transform=transform, download=True))
-valid_set = train_set[int(0.8 * len(train_set)):]
-train_set = train_set[:int(0.8 * len(train_set))]
+valid_set = train_set[int(0.8*len(train_set)):]
+train_set = train_set[:int(0.8*len(train_set))]
 
 sorted_train_set = sorted(train_set, key=lambda t: t[1])
 test_set = mnist.MNIST('data/mnist', train=False, transform=transform, download=True)
 train_dataloader = DataLoader(train_set, batch_size=64, shuffle=True)
 test_dataloader = DataLoader(test_set, batch_size=128, shuffle=False)
 
-# generate sorted training dataset
+
+
+#generate sorted training dataset
 number = torch.zeros(10)
 for i in range(len(sorted_train_set)):
     number[sorted_train_set[i][1]] += 1
 
-# train_set_size = sorted(torch.Tensor([0] + random.sample(range(1, len(train_set)), L - 1) + [len(train_set) - 1]))
+# train_set_size = sorted(torch.Tensor([0] + random.sample(range(1,len(train_set)),L-1) + [len(train_set)-1]))
 train_set_size = [0, 4456, 6349, 17228, 21839, 25415, 28386, 31255, 35466, 36174, 42703, 45126, 47999]
 print(train_set_size)
-
 train_set_agent = []
 train_dataloader_agent = []
 for i in range(L):
-    train_set_agent.append(train_set[int(train_set_size[i]): int(train_set_size[i + 1])])
+    train_set_agent.append(train_set[int(train_set_size[i]) : int(train_set_size[i+1])])
     train_dataloader_agent.append(DataLoader(train_set_agent[i], batch_size=64, shuffle=True))
 
 # train the GNN
@@ -73,24 +70,14 @@ for epoch in range(10):
             loss_list.append(loss.data)
             loss.backward()
             optimizer_agent[i].step()
-        print("the loss of agent ", i, " : ", sum(loss_list) / (len(loss_list)))
-    for i in range(L):
-        if i == 0:
-            for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-                target_param.data.copy_(param.data)
-        else:
-            for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-                target_param.data.copy_(target_param.data + param.data)
-    for i in range(L):
-        for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-            param.data.copy_(target_param.data/L)
+        # print("the loss of agent ",i," : ",sum(loss_list)/(len(loss_list)))
 
 # test the GNN
 accuracy_list = []
 for i in range(L):
     for test_data in test_dataloader:
         out = net_agent[i](test_data[0])
-        accuracy = sum(torch.max(out, dim=1).indices == test_data[1])
-        accuracy_list.append(accuracy / 128)
+        accuracy = sum(torch.max(out,dim=1).indices == test_data[1])
+        accuracy_list.append(accuracy/128)
 
-    print("the average accuracy of agent ", i, " : ", sum(accuracy_list) / len(accuracy_list))
+    print("the average accuracy of agent ",i," : ",sum(accuracy_list)/len(accuracy_list))

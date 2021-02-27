@@ -360,7 +360,8 @@
 import torch
 from torch_geometric.data import Data
 import argparse
-torch.manual_seed(10)
+import math
+# torch.manual_seed(10)
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_size', type=int, default=2500,
                     help='Size of the training data')
@@ -381,13 +382,17 @@ for k in range(args.data_size):
     x = torch.cat((torch.randn(args.num_node, args.num_weight), torch.ones(args.num_node,1)), dim=1)
     y = []
     multiplier = torch.transpose(x,0,1)[args.num_weight]
+
     divider = sum(multiplier)
     for i in range(args.num_weight):
         y.append(sum(torch.transpose(x,0,1)[i] * multiplier) / divider)
     y = torch.Tensor(y) * torch.ones((args.num_node, args.num_weight))
 
-    data = Data(x=x,y=y,edge_index=edge_index)
+    # for i in range(args.num_node):
+    #     x[i] = x[i] * x[i][args.num_weight]
+    #     x[i][args.num_weight] = math.sqrt( x[i][args.num_weight])
 
+    data = Data(x=x,y=y,edge_index=edge_index)
     data_list.append(data)
 
 train_data = data_list[:int(0.8 * args.data_size)]
@@ -412,6 +417,7 @@ class GCN(nn.Module):
         self.lin = nn.Linear(nhid, nclasses)
 
     def forward(self, x, edge_index):
+
         x = F.relu(self.gc1(x,edge_index))
         x = F.relu(self.gc2(x,edge_index))
         x = self.lin(x)
@@ -440,7 +446,6 @@ while(k<1200):
         loss_train.backward()
         optimizer.step()
 
-        loss_train_list.append(loss_train.data)
         print(loss_train.data)
 
 # test the GNN
