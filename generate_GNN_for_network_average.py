@@ -1,4 +1,5 @@
 import torch
+import numpy
 from torch_geometric.data import Data
 from torch.nn.parameter import Parameter
 from torch.nn.modules.module import Module
@@ -91,7 +92,7 @@ def getNormalizedAdj(data):
     col = data.edge_index[1].cpu()
     raw_data = torch.ones(data.edge_index.shape[1])
     adj = sp.coo_matrix((raw_data, (row, col)), shape=(data.x.shape[0], data.x.shape[0])).toarray()
-    evals_large, evecs_large = eigsh(adj, 1, which='LM')
+    # evals_large, evecs_large = eigsh(adj, 1, which='LM')
     adj_ = copy.deepcopy(torch.Tensor(adj))
     adj = torch.Tensor(adj / evals_large)
     adj = adj.to(device)
@@ -169,7 +170,7 @@ while(k<1200):
 
         adj,adj_ = getNormalizedAdj(data)
         # divi = torch.transpose(torch.ones((args.num_weight, args.num_node)) * sum(adj_), 0, 1)
-        output = model(data.x, adj).squeeze()
+        output = model(data.x, adj_).squeeze()
         loss_train = crit(output, data.y.squeeze())
 
         loss_train_list.append(loss_train.item())
@@ -187,7 +188,7 @@ while(k<1200):
         data.to(device)
         adj,adj_ = getNormalizedAdj(data)
         # divi = torch.transpose(torch.ones((args.num_weight, args.num_node)) * sum(adj_), 0, 1)
-        output = model(data.x, adj).squeeze()
+        output = model(data.x, adj_).squeeze()
         loss_val = crit(output, data.y.squeeze())
 
         loss_val_list.append(loss_val.item())
@@ -211,7 +212,7 @@ loss_test_list = []
 for j in range(len(test_data)):
     data = test_data[j]
     adj,adj_ = getNormalizedAdj(data)
-    output = model(data.x, adj).squeeze()
+    output = model(data.x, adj_).squeeze()
     loss_test = crit(output, data.y.squeeze())
     loss_test_list.append(loss_test.item())
 
