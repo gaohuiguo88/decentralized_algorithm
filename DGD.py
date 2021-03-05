@@ -78,6 +78,7 @@ U = U.reshape((L,mi,node_feature))
 v = torch.empty((L,mi))
 for i in range(L):
     v[i] = torch.matmul(U[i],x[i])+noise[i]
+    # v[i] = torch.matmul(U[i],x[i])
 
 Iteration = 2500
 # W = 1/L * torch.ones((L,L))

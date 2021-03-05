@@ -96,7 +96,7 @@ def getNormalizedAdj(data):
     adj = adj.to(device)
     return adj
 
-model = torch.load('./model_best.pt')
+model = torch.load('./model.pt')
 
 def generate_Metropolis_W(data):
     row = data.edge_index[0].cpu()
@@ -182,11 +182,14 @@ for k in range(Iteration):
         recon_x = recon_x.requires_grad_()
 
 
-    # with torch.no_grad():
-    #     # index_1 = model(recon_x, data.edge_index).squeeze()
-    #     adj = getNormalizedAdj(data)
-    #     recon_x = model(recon_x, adj).squeeze()
-    #     recon_x = recon_x.requires_grad_()
+    with torch.no_grad():
+        # index_1 = model(recon_x, data.edge_index).squeeze()
+        adj = getNormalizedAdj(data)
+        index_2 = torch.zeros((node_feature,L))
+        for i in range(node_feature):
+            index_2[i]= model(recon_x.T[i].unsqueeze(1), adj).squeeze()
+        recon_x = index_2.T
+        recon_x = recon_x.requires_grad_()
     # gap.append(torch.norm(index_1-recon_x).item())
     # print("loss between GNN and normal one", torch.norm(index_1-index_2[0]))
     # for i in range(L):
@@ -196,6 +199,8 @@ print(len(loss_list))
 x_label = [i for i in range(len(loss_list))]
 plt.plot(x_label,loss_list)
 # plt.plot(x_label,gap)
+plt.ylabel('loss')
+plt.xlabel('epochs')
 plt.yscale('log')
 plt.show()
 print(loss_list[len(loss_list)-1])

@@ -61,67 +61,65 @@ for i in range(L):
 
 # train the GNN
 crit = torch.nn.MSELoss()
-acc_ll = []
-store_training_data = torch.zeros((10,L,7850))
-for epoch in range(10):
-    loss_list = []
-    for i in range(L):
-        for train_data in train_dataloader_agent[i]:
-            optimizer_agent[i].zero_grad()
-            target = torch.nn.functional.one_hot((train_data[1]).to(torch.int64), num_classes=10)
-            target = target.type(torch.FloatTensor)
-            out = net_agent[i](train_data[0])
-            loss = crit(out, target)
-            loss_list.append(loss.data)
-            loss.backward()
-            optimizer_agent[i].step()
-        print("the loss of agent ", i, " : ", sum(loss_list) / (len(loss_list)))
 
-    for i in range(L):
-        k = 0
-        for param in net_agent[i].parameters():
-            if k == 0:
-                store_training_data[epoch][i][:7840] = torch.reshape(param.data,(7840,))
+sigma = 1
+# for sigma in [1,1e-1,1e-2,1e-3,1e-4,0]:
+for sigma in [2,1,1e-1,1e-3,1e-6,0]:
+    acc_ll = []
+    for epoch in range(10):
+        loss_list = []
+        for i in range(L):
+            for train_data in train_dataloader_agent[i]:
+                optimizer_agent[i].zero_grad()
+                target = torch.nn.functional.one_hot((train_data[1]).to(torch.int64), num_classes=10)
+                target = target.type(torch.FloatTensor)
+                out = net_agent[i](train_data[0])
+                loss = crit(out, target)
+                loss_list.append(loss.data)
+                loss.backward()
+                optimizer_agent[i].step()
+            print("the loss of agent ", i, " : ", sum(loss_list) / (len(loss_list)))
+        for i in range(L):
+            if i == 0:
+                for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+                    target_param.data.copy_(param.data)
             else:
-                store_training_data[epoch][i][7840:] = param.data
-            k += 1
-
-
-    for i in range(L):
-        if i == 0:
+                for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+                    target_param.data.copy_(target_param.data + param.data)
+        for i in range(L):
+            k = 0
             for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-                target_param.data.copy_(param.data)
-        else:
-            for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-                target_param.data.copy_(target_param.data + param.data)
-    for i in range(L):
-        for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-            param.data.copy_(target_param.data/L)
+                if k == 0:
+                    param.data.copy_(target_param.data/L + sigma * torch.rand((10,784)))
+                else:
+                    param.data.copy_(target_param/L + sigma * torch.rand(10))
+                k += 1
 
+        accuracy_list = []
+        for i in range(L):
+            for valid_data in valid_dataloader:
+                out = net_agent[i](valid_data[0])
+                accuracy = sum(torch.max(out, dim=1).indices == valid_data[1])
+                accuracy_list.append(accuracy / 64)
+        acc_ll.append(sum(accuracy_list)/len(accuracy_list))
+
+    # test the GNN
     accuracy_list = []
     for i in range(L):
-        for valid_data in valid_dataloader:
-            out = net_agent[i](valid_data[0])
-            accuracy = sum(torch.max(out, dim=1).indices == valid_data[1])
-            accuracy_list.append(accuracy / 64)
-    acc_ll.append(sum(accuracy_list)/len(accuracy_list))
+        for test_data in test_dataloader:
+            out = net_agent[i](test_data[0])
+            accuracy = sum(torch.max(out, dim=1).indices == test_data[1])
+            accuracy_list.append(accuracy / 128)
 
-# test the GNN
-accuracy_list = []
-for i in range(L):
-    for test_data in test_dataloader:
-        out = net_agent[i](test_data[0])
-        accuracy = sum(torch.max(out, dim=1).indices == test_data[1])
-        accuracy_list.append(accuracy / 128)
+        print("the average accuracy of agent ", i, " : ", sum(accuracy_list) / len(accuracy_list))
 
-    print("the average accuracy of agent ", i, " : ", sum(accuracy_list) / len(accuracy_list))
+    x_label = [i for i in range(len(acc_ll))]
+    plt.plot(x_label,acc_ll,label = 'sigma = %f'%sigma)
 
-x_label = [i for i in range(len(acc_ll))]
-plt.plot(x_label,acc_ll)
-plt.xlabel('epochs')
-plt.ylabel('average accuracy')
-plt.title('Fedavg Algorithm operated on MNIST dataset')
+    plt.xlabel('epochs')
+    plt.ylabel('average accuracy')
+    plt.title('Fedavg Algorithm operated on MNIST dataset')
+    plt.legend()
 # plt.yscale('log')
-plt.show()
 # print(loss_list[len(loss_list)-1])
-torch.save(store_training_data,'./store_training_data.pt')
+plt.show()
