@@ -107,7 +107,8 @@ net_agent = []
 optimizer_agent = []
 for i in range(L):
     net_agent.append(Net())
-    optimizer_agent.append(torch.optim.SGD(net_agent[i].parameters(),lr=1e-6))
+    # optimizer_agent.append(torch.optim.SGD(net_agent[i].parameters(),lr=1e-3))
+    optimizer_agent.append(torch.optim.Adam(net_agent[i].parameters()))
 
 transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize(mean=[0.5], std=[0.5])])
@@ -140,7 +141,7 @@ for i in range(L):
 # train the GNN
 crit = torch.nn.MSELoss()
 acc_ll = []
-
+loss_gnn_list = []
 for epoch in range(10):
     loss_list = []
     for i in range(L):
@@ -154,6 +155,28 @@ for epoch in range(10):
             loss.backward()
             optimizer_agent[i].step()
         print("the loss of agent ", i, " : ", sum(loss_list) / (len(loss_list)))
+
+    for i in range(L):
+        if i == 0:
+            for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+                target_param.data.copy_(param.data)
+        else:
+            for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+                target_param.data.copy_(target_param.data + param.data)
+    for i in range(L):
+        for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+            param.data.copy_(target_param.data/L)
+
+    # for i in range(L):
+    #     if i == 0:
+    #         for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+    #             target_param.data.copy_(param.data)
+    #     else:
+    #         for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+    #             target_param.data.copy_(target_param.data + param.data)
+    # for i in range(L):
+    #     for target_param in target_model.parameters():
+    #         target_param.data.copy_(target_param.data/L)
 
     model_parameter_list = []
     for i in range(L):
@@ -172,19 +195,23 @@ for epoch in range(10):
     gnn_value = torch.zeros((7850,12))
     for ii in range(7850):
         model_input = (model_parameter_tensor.T[ii].T).unsqueeze(1)
-        gnn_value[i] = model(model_input, adj).squeeze(1)
+        gnn_value[ii] = model(model_input, adj).squeeze(1)
 
     gnn_value = gnn_value.T
-
+    # loss_gnn = torch.norm(gnn_value - torch.ones((12,7850)) * sum(model_parameter_tensor) / L)
+    # loss_gnn_list.append(loss_gnn)
+    #
+    # gnn_value = torch.ones((12, 7850)) * sum(model_parameter_tensor) / L
     for i in range(L):
         k = 0
+        gnn_index = gnn_value[i].data.reshape(10, 785)
         for param in net_agent[i].parameters():
             if k == 0:
-                param.data.copy_(gnn_value[i][:7840].data.reshape(10,784))
+                param.data.copy_(gnn_index.T[:784].T)
             else:
-                param.data.copy_(gnn_value[i][7840:].data)
+                param.data.copy_(gnn_index.T[784:].T.squeeze(1))
             k += 1
-            # print("#", param.data, "#")
+    #         # print("#", param.data, "#")
 
     accuracy_list = []
     for i in range(L):
@@ -193,6 +220,8 @@ for epoch in range(10):
             accuracy = sum(torch.max(out, dim=1).indices == valid_data[1])
             accuracy_list.append(accuracy / 64)
     acc_ll.append(sum(accuracy_list)/len(accuracy_list))
+
+
 
         # model()
     # for i in range(L):
@@ -206,11 +235,21 @@ for epoch in range(10):
     #     for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
     #         print(target_param.data)
     #         param.data.copy_(target_param.data/L)
+
+baseline = torch.load('./baseline.pt')
 x_label = [i for i in range(len(acc_ll))]
-plt.plot(x_label,acc_ll)
+plt.plot(x_label, baseline[:len(x_label)],'r+',label='Fedavg')
+plt.plot(x_label,acc_ll,'bo', label='GNNavg')
 plt.xlabel('epochs')
 plt.ylabel('average accuracy')
-plt.title('GNN_avg Algorithm operated on MNIST dataset')
+plt.title('Fedavg/GNNavg operated on MNIST dataset')
+plt.legend()
+# x_label = [i for i in range(len(loss_gnn_list))]
+# plt.plot(x_label,loss_gnn_list)
+# plt.xlabel('epochs')
+# plt.ylabel('loss')
+# plt.title('GNN_avg Aggregation Loss')
+
 plt.show()
 
 # test the GNN

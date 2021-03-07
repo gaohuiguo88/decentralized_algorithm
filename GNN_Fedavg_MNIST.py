@@ -84,7 +84,7 @@ def getNormalizedAdj(data):
     adj = adj.to(device)
     return adj
 
-model = torch.load('./model.pt')
+model = torch.load('./model.pt',map_location='cpu')
 
 class Net(nn.Module):
     def __init__(self):
@@ -170,13 +170,14 @@ for epoch in range(100):
 
     for i in range(L):
         k = 0
+        gnn_index = gnn_value[i].data.reshape(10, 785)
         for param in net_agent[i].parameters():
             if k == 0:
-                param.data.copy_(gnn_value[i][:7840].data.reshape(10,784)*1.4)
+                param.data.copy_(gnn_index.T[:784].T)
             else:
-                param.data.copy_(gnn_value[i][7840:].data*1.4)
+                param.data.copy_(gnn_index.T[784:].T.squeeze(1))
             k += 1
-            # print("#", param.data, "#")
+    #         # print("#", param.data, "#")
 
 
 

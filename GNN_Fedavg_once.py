@@ -96,7 +96,7 @@ def getNormalizedAdj(data):
     adj = adj.to(device)
     return adj
 
-model = torch.load('./model.pt')
+model = torch.load('./model.pt',map_location=torch.device('cpu'))
 
 def generate_Metropolis_W(data):
     row = data.edge_index[0].cpu()
@@ -150,12 +150,52 @@ v = torch.empty((L,mi))
 for i in range(L):
     v[i] = torch.matmul(U[i],x[i])+noise[i]
 
-Iteration = 400
+Iteration = 2500
 
 W = generate_Metropolis_W(data)
 recon_x = torch.zeros((L,node_feature),requires_grad=True)
 loss_list = []
 gap = []
+# for k in range(Iteration):
+#     alpha = 6e-2
+#     for i in range(L):
+#         formula = v[i]-torch.matmul(U[i],recon_x[i])
+#         f = torch.matmul(formula, formula)
+#         f.backward()
+#
+#     loss = norm_f(recon_x - x)/norm_f(torch.zeros((L,node_feature))-x)
+#     loss_list.append(loss.data)
+#     cp_recon_x = copy.deepcopy(recon_x)
+#     for i in range(L):
+#         with torch.no_grad():
+#             recon_x[i] = torch.matmul(W[i],cp_recon_x) - alpha * recon_x.grad[i]
+#
+#     with torch.no_grad():
+#         adj = getNormalizedAdj(data)
+#         index_2 = torch.zeros((node_feature,L))
+#         for i in range(node_feature):
+#             index_2[i]= model(recon_x.T[i].unsqueeze(1), adj).squeeze()
+#         recon_x = index_2.T
+#         recon_x = recon_x.requires_grad_()
+
+    # gap.append(torch.norm(index_1-recon_x).item())
+    # print("loss between GNN and normal one", torch.norm(index_1-index_2[0]))
+    # for i in range(L):
+    #     with torch.no_grad():
+    #         recon_x[i] = index_1[i].data
+
+# print(len(loss_list))
+# x_label = [i for i in range(len(loss_list))]
+# plt.plot(x_label,loss_list,label='GNNavg')
+# # plt.plot(x_label,gap)
+# plt.ylabel('residual')
+# plt.xlabel('k')
+# plt.yscale('log')
+# plt.legend()
+# #
+# recon_x = torch.zeros((L,node_feature),requires_grad=True)
+store_training_data = torch.zeros((Iteration,L,node_feature))
+loss_list = []
 for k in range(Iteration):
     alpha = 6e-2
     for i in range(L):
@@ -170,37 +210,20 @@ for k in range(Iteration):
         with torch.no_grad():
             # print(recon_x.grad[i])
             recon_x[i] = torch.matmul(W[i],cp_recon_x) - alpha * recon_x.grad[i]
-    # for i in range(L):
-    #     with torch.no_grad():
-    #         recon_x[i] = sum(recon_x)/L
-
     with torch.no_grad():
-        # print((torch.max(recon_x,0)))
-        index_1 = sum(recon_x)/L * torch.ones((L,node_feature))
-        recon_x = index_1
-        # recon_x = index_1 + 1e-5*torch.rand((12,3))
-        recon_x = recon_x.requires_grad_()
+        store_training_data[k] = recon_x
+    for i in range(L):
+        with torch.no_grad():
+            recon_x[i] = sum(recon_x)/L
 
-
-    with torch.no_grad():
-        # index_1 = model(recon_x, data.edge_index).squeeze()
-        adj = getNormalizedAdj(data)
-        index_2 = torch.zeros((node_feature,L))
-        for i in range(node_feature):
-            index_2[i]= model(recon_x.T[i].unsqueeze(1), adj).squeeze()
-        recon_x = index_2.T
-        recon_x = recon_x.requires_grad_()
-    # gap.append(torch.norm(index_1-recon_x).item())
-    # print("loss between GNN and normal one", torch.norm(index_1-index_2[0]))
-    # for i in range(L):
-    #     with torch.no_grad():
-    #         recon_x[i] = index_1[i].data
 print(len(loss_list))
 x_label = [i for i in range(len(loss_list))]
-plt.plot(x_label,loss_list)
+plt.plot(x_label,loss_list,label='Fedavg')
 # plt.plot(x_label,gap)
-plt.ylabel('loss')
-plt.xlabel('epochs')
+plt.ylabel('residual')
+plt.xlabel('k')
 plt.yscale('log')
+plt.legend()
 plt.show()
-print(loss_list[len(loss_list)-1])
+torch.save(store_training_data,'./store_training_data_estimation.pt')
+# print(loss_list[len(loss_list)-1])
