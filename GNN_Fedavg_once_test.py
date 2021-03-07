@@ -153,87 +153,47 @@ for i in range(L):
 Iteration = 2500
 
 W = generate_Metropolis_W(data)
-recon_x = torch.zeros((L,node_feature),requires_grad=True)
-loss_list = []
-gap = []
-for k in range(Iteration):
-    alpha = 6e-2
-    for i in range(L):
-        formula = v[i]-torch.matmul(U[i],recon_x[i])
-        f = torch.matmul(formula, formula)
-        f.backward()
 
-    loss = norm_f(recon_x - x)/norm_f(torch.zeros((L,node_feature))-x)
-    loss_list.append(loss.data)
-    cp_recon_x = copy.deepcopy(recon_x)
-    for i in range(L):
+for K_number in [1,4,7,10]:
+    # addr = 'C:\\Users\\AAA\\Desktop\\try_K_%d_Mar7th_NewTrainingData_for_estimation\\'%K_number
+    addr = 'C:\\Users\\AAA\\Desktop\\try_K_%d_Mar2nd\\'%K_number
+    model = torch.load(addr + 'model_best.pt',map_location=torch.device('cpu'))
+
+    recon_x = torch.zeros((L,node_feature),requires_grad=True)
+    loss_list = []
+    gap = []
+    for k in range(Iteration):
+        alpha = 6e-2
+        for i in range(L):
+            formula = v[i]-torch.matmul(U[i],recon_x[i])
+            f = torch.matmul(formula, formula)
+            f.backward()
+
+        loss = norm_f(recon_x - x)/norm_f(torch.zeros((L,node_feature))-x)
+        loss_list.append(loss.data)
+
+        print("K : ",K_number,"Iteration : ",k," Loss: ",loss.data)
+
+        cp_recon_x = copy.deepcopy(recon_x)
+        for i in range(L):
+            with torch.no_grad():
+                recon_x[i] = torch.matmul(W[i],cp_recon_x) - alpha * recon_x.grad[i]
+
         with torch.no_grad():
-            recon_x[i] = torch.matmul(W[i],cp_recon_x) - alpha * recon_x.grad[i]
+            index_1 = torch.ones((L,node_feature))*sum(recon_x)/L
 
-    with torch.no_grad():
-        index_1 = torch.ones((L,node_feature))*sum(recon_x)/L
+        with torch.no_grad():
+            adj = getNormalizedAdj(data)
+            index_2 = torch.zeros((node_feature,L))
+            for i in range(node_feature):
+                index_2[i]= model(recon_x.T[i].unsqueeze(1), adj).squeeze()
+            recon_x = index_2.T
+            recon_x = recon_x.requires_grad_()
 
-    with torch.no_grad():
-        adj = getNormalizedAdj(data)
-        index_2 = torch.zeros((node_feature,L))
-        for i in range(node_feature):
-            index_2[i]= model(recon_x.T[i].unsqueeze(1), adj).squeeze()
-        recon_x = index_2.T
-        recon_x = recon_x.requires_grad_()
+        gap.append(torch.norm(index_1-recon_x).item())
+        # print("loss between GNN and normal one", torch.norm(index_1-recon_x).item())
 
-    gap.append(torch.norm(index_1-recon_x).item())
-    print("loss between GNN and normal one", torch.norm(index_1-recon_x).item())
-    # for i in range(L):
-    #     with torch.no_grad():
-    #         recon_x[i] = index_1[i].data
+    torch.save(gap, './gap_forestimation_K_%d.pt' % K_number)
+    torch.save(loss_list, './losslist_forestimation_K_%d.pt' % K_number)
 
-print(len(loss_list))
-x_label = [i for i in range(len(loss_list))]
-plt.plot(x_label,loss_list,label='GNNavg')
 
-plt.ylabel('residual')
-plt.xlabel('k')
-plt.yscale('log')
-
-# x_label = [i for i in range(len(gap))]
-# plt.plot(x_label,gap)
-# plt.ylabel('loss')
-# plt.xlabel('k')
-
-plt.legend()
-plt.show()
-# #
-# # recon_x = torch.zeros((L,node_feature),requires_grad=True)
-# store_training_data = torch.zeros((Iteration,L,node_feature))
-# loss_list = []
-# for k in range(Iteration):
-#     alpha = 6e-2
-#     for i in range(L):
-#         formula = v[i]-torch.matmul(U[i],recon_x[i])
-#         f = torch.matmul(formula, formula)
-#         f.backward()
-#
-#     loss = norm_f(recon_x - x)/norm_f(torch.zeros((L,node_feature))-x)
-#     loss_list.append(loss.data)
-#     cp_recon_x = copy.deepcopy(recon_x)
-#     for i in range(L):
-#         with torch.no_grad():
-#             # print(recon_x.grad[i])
-#             recon_x[i] = torch.matmul(W[i],cp_recon_x) - alpha * recon_x.grad[i]
-#     with torch.no_grad():
-#         store_training_data[k] = recon_x
-#     for i in range(L):
-#         with torch.no_grad():
-#             recon_x[i] = sum(recon_x)/L
-#
-# print(len(loss_list))
-# x_label = [i for i in range(len(loss_list))]
-# plt.plot(x_label,loss_list,label='Fedavg')
-# # plt.plot(x_label,gap)
-# plt.ylabel('residual')
-# plt.xlabel('k')
-# plt.yscale('log')
-# plt.legend()
-# plt.show()
-# torch.save(store_training_data,'./store_training_data_estimation.pt')
-# print(loss_list[len(loss_list)-1])

@@ -149,12 +149,13 @@ acc_ll = []
 param_data_index = torch.zeros((L,7850))
 
 # alpha, adj = getBestConstantAlpha(data)
-# alpha, adj = getDMax(data)
+alpha, adj = getDMax(data)
 # W = getW(alpha, adj)
 # W = generate_Metropolis_W(adj)
-# W = generate_Laplacian(0.2,adj)
-W = generateLocalMax(data)
-for epoch in range(10):
+W = generate_Laplacian(0.2,adj)
+# W = generateLocalMax(data)
+
+for epoch in range(20):
     loss_list = []
     for i in range(L):
         for train_data in train_dataloader_agent[i]:
@@ -220,14 +221,30 @@ for i in range(L):
 
     print("the average accuracy of agent ", i, " : ", sum(accuracy_list) / len(accuracy_list))
 
+# acc_ll_mnist_gnn = torch.load('./acc_ll_mnist_gnn.pt')
 baseline = torch.load('./baseline.pt')
 x_label = [i for i in range(len(acc_ll))]
+
 # plt.plot(x_label,acc_ll,label='BestConstant')
+# plt.plot(x_label,baseline[:len(x_label)],label='baseline')
+# torch.save(acc_ll,'acc_ll_bestconstant_weights.pt')
+
 # plt.plot(x_label,acc_ll,label='Metropolis weights')
-# plt.plot(x_label,acc_ll,label='Laplacian weights')
-# plt.plot(x_label,acc_ll,label='Maximum degree ')
-plt.plot(x_label,acc_ll,label='Local degree ')
+# plt.plot(x_label,baseline[:len(x_label)],label='baseline')
+# torch.save(acc_ll,'acc_ll_metropolis_weights.pt')
+
+plt.plot(x_label,acc_ll,label='Laplacian weights')
 plt.plot(x_label,baseline[:len(x_label)],label='baseline')
+torch.save(acc_ll,'acc_ll_laplacian_weights.pt')
+
+# plt.plot(x_label,acc_ll,label='Maximum degree ')
+# plt.plot(x_label,baseline[:len(x_label)],label='baseline')
+# torch.save(acc_ll,'acc_ll_mnist_max_degree.pt')
+
+# plt.plot(x_label,acc_ll,label='Local degree ')
+# plt.plot(x_label,baseline[:len(x_label)],label='baseline')
+# torch.save(acc_ll,'acc_ll_mnist_local_degree.pt')
+
 plt.legend()
 plt.xlabel('epochs')
 plt.ylabel('average accuracy')

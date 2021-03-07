@@ -29,7 +29,8 @@ net_agent = []
 optimizer_agent = []
 for i in range(L):
     net_agent.append(Net())
-    optimizer_agent.append(torch.optim.Adam(net_agent[i].parameters()))
+    # optimizer_agent.append(torch.optim.Adam(net_agent[i].parameters()))
+    optimizer_agent.append(torch.optim.SGD(net_agent[i].parameters(),lr=1e-3))
 
 transform = transforms.Compose([transforms.ToTensor(),
                                 transforms.Normalize(mean=[0.5], std=[0.5])])
@@ -62,8 +63,8 @@ for i in range(L):
 # train the GNN
 crit = torch.nn.MSELoss()
 acc_ll = []
-store_training_data = torch.zeros((10,L,7850))
-for epoch in range(10):
+store_training_data = torch.zeros((100,L,7850))
+for epoch in range(100):
     loss_list = []
     for i in range(L):
         for train_data in train_dataloader_agent[i]:
@@ -124,4 +125,4 @@ plt.title('Fedavg Algorithm operated on MNIST dataset')
 # plt.yscale('log')
 plt.show()
 # print(loss_list[len(loss_list)-1])
-torch.save(store_training_data,'./store_training_data.pt')
+# torch.save(store_training_data,'./store_training_data.pt')
