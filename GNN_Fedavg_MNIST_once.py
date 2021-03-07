@@ -156,16 +156,16 @@ for epoch in range(10):
             optimizer_agent[i].step()
         print("the loss of agent ", i, " : ", sum(loss_list) / (len(loss_list)))
 
-    for i in range(L):
-        if i == 0:
-            for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-                target_param.data.copy_(param.data)
-        else:
-            for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-                target_param.data.copy_(target_param.data + param.data)
-    for i in range(L):
-        for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
-            param.data.copy_(target_param.data/L)
+    # for i in range(L):
+    #     if i == 0:
+    #         for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+    #             target_param.data.copy_(param.data)
+    #     else:
+    #         for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+    #             target_param.data.copy_(target_param.data + param.data)
+    # for i in range(L):
+    #     for target_param, param in zip(target_model.parameters(), net_agent[i].parameters()):
+    #         param.data.copy_(target_param.data/L)
 
     # for i in range(L):
     #     if i == 0:
